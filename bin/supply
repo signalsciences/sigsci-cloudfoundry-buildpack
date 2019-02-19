@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# bin/supply <build-dir> <cache-dir> <deps_dir> <index_dir>
+#
+# Copyright 2019 Signal Sciences Corp.
+#
+# signalsciences supply script
+#
+
+BIN_DIR=$(dirname "$0")
+ROOT_DIR=$(dirname "$BIN_DIR")
+
+BUILD_DIR=$1
+#CACHE_DIR=$2
+#DEPS_DIR=$3
+#INDEX_DIR=$4
+
+echo "SUPPLY Installing signalsciences cloudfoundry scripts..."
+mkdir -p "$BUILD_DIR"/.profile.d
+cp "$ROOT_DIR"/lib/sigsci-agent.sh "$BUILD_DIR"/.profile.d
+chmod +x "$BUILD_DIR"/.profile.d/sigsci-agent.sh

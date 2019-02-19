@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# always decorate if meta-buildpacks are available
+exit 0

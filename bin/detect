@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Never be auto-detected as a "final" buildpack
+exit 1
