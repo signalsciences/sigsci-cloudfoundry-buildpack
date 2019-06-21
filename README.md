@@ -1,5 +1,5 @@
 # sigsci-cloudfoundry-buildpack
-Cloud Foundry multi-buildpack and buildpack decorator for Signal Sciences agent integration
+Cloud Foundry multi-buildpack for Signal Sciences agent integration
 
 This is a [supply-buildpack](https://docs.cloudfoundry.org/buildpacks/understand-buildpacks.html#supply-script)
 for Cloud Foundry that provides integration with the Signal Sciences agent *for any programming
