@@ -84,21 +84,21 @@ then
   # if agent version not specified then get the latest version.
   if [ -z $SIGSCI_AGENT_VERSION ]
   then
-    SIGSCI_AGENT_VERSION=$(curl -s https://dl.signalsciences.net/sigsci-agent/VERSION)
+    SIGSCI_AGENT_VERSION=$(curl -s -L --retry 15 --retry-delay 2 https://dl.signalsciences.net/sigsci-agent/VERSION)
   fi
 
   # check if version exists.
-  STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/VERSION)
+  STATUS=$(curl -s --retry 15 --retry-delay 2 -o /dev/null -w "%{http_code}" https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/VERSION)
   if [ $STATUS -ne 200 ]
   then
   
     # if we don't get a 200 response, skip agent installation.
-    (>&2 echo "-----> SigSci Agent version ${SIGSCI_AGENT_VERSION} not found!")
+    (>&2 echo "-----> SigSci Agent version ${SIGSCI_AGENT_VERSION} not found or network unavailable after 30 seconds!")
     (>&2 echo "-----> SIGSCI AGENT WILL NOT BE INSTALLED!")
   
   else
     echo "-----> Downloading and installing sigsci-agent"
-    curl -s https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz | tar -xz && mv sigsci-agent "${SIGSCI_DIR}/bin/sigsci-agent"
+    curl -s --retry 15 --retry-delay 2 https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz | tar -xz && mv sigsci-agent "${SIGSCI_DIR}/bin/sigsci-agent"
 
     # do config
     PORT_LISTENER=${PORT}
