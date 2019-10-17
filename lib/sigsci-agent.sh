@@ -69,9 +69,15 @@ function health_check() {
   exit
 }
 
+# Sanity check for CF env
+if [ -z "${PORT}" ]; then
+  (>&2 echo "-----> Cloud Foundry PORT not set and cannot determine configuration. Agent not starting!!!")
+  exit
+fi
+
 # check if access keys are defined.
 # if defined, then proceed with install. Othewise, skip install.
-if [ ! -z $SIGSCI_ACCESSKEYID ] && [ ! -z $SIGSCI_SECRETACCESSKEY ]
+if [ -n "${SIGSCI_ACCESSKEYID}" -a -n "${SIGSCI_SECRETACCESSKEY}" ]
 then
   # setup directories
   PWD=`pwd`
@@ -91,11 +97,11 @@ then
   STATUS=$(curl -s --retry 45 --retry-delay 2 -o /dev/null -w "%{http_code}" https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/VERSION)
   if [ $STATUS -ne 200 ]
   then
-  
+
     # if we don't get a 200 response, skip agent installation.
     (>&2 echo "-----> SigSci Agent version ${SIGSCI_AGENT_VERSION} not found or network unavailable after 90 seconds!")
     (>&2 echo "-----> SIGSCI AGENT WILL NOT BE INSTALLED!")
-  
+
   else
     echo "-----> Downloading and installing sigsci-agent"
     curl -s --retry 45 --retry-delay 2 https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz | tar -xz && mv sigsci-agent "${SIGSCI_DIR}/bin/sigsci-agent"
@@ -104,7 +110,7 @@ then
     PORT_LISTENER=${PORT}
     PORT_UPSTREAM=8081
     SIGSCI_UPSTREAM=127.0.0.1:${PORT_UPSTREAM}
-    SIGSCI_CONFIG=${SIGSCI_DIR}/conf/agent.conf
+    SIGSCI_CONFIG_FILE=${SIGSCI_DIR}/conf/agent.conf
 
     ## optional config variable, if not provided default value will be used.
 
@@ -121,7 +127,7 @@ then
     # reverse proxy accesslog - disable access logging by default.
     if [ -z $SIGSCI_REVERSE_PROXY_ACCESSLOG ]
     then
-      export SIGSCI_REVERSE_PROXY_ACCESSLOG=''
+      SIGSCI_REVERSE_PROXY_ACCESSLOG=''
     fi
 
     # require signal sciences agent for app to start.
@@ -148,24 +154,29 @@ then
     # reassign PORT for application process.
     export PORT=${PORT_UPSTREAM}
 
-    echo 'reverse-proxy = true' >> ${SIGSCI_CONFIG}
-    echo 'reverse-proxy-listener = "0.0.0.0:'${PORT_LISTENER}'"' >> ${SIGSCI_CONFIG}
-    echo 'reverse-proxy-upstream = "'${SIGSCI_UPSTREAM}'"' >> ${SIGSCI_CONFIG}
-    echo 'reverse-proxy-accesslog = "'${SIGSCI_REVERSE_PROXY_ACCESSLOG}'"' >> ${SIGSCI_CONFIG}
+    cat > ${SIGSCI_CONFIG_FILE} <<EOT
+# Signal Sciences Reverse Proxy Config
+[revproxy-listener.http]
+listener = "http://0.0.0.0:${PORT_LISTENER}"
+upstreams = "http://${SIGSCI_UPSTREAM}"
+access-log = "${SIGSCI_REVERSE_PROXY_ACCESSLOG}"
+EOT
 
     # start agent
     echo "-----> Starting Signal Sciences Agent!"
     (
-      SIGSCI_CONFIG="${SIGSCI_CONFIG}" ${SIGSCI_DIR}/bin/sigsci-agent
+      # Remove any deprecated reverse proxy config options
+      export -n SIGSCI_REVPROXY $(env | grep ^SIGSCI_REVERSE_PROXY_ | awk -F= '{print $1}');
+      ${SIGSCI_DIR}/bin/sigsci-agent --config="${SIGSCI_CONFIG_FILE}"
     ) &
 
     SIGSCI_PID=$!
 
     # wait plenty of time for agent to startup
     sleep 5
-    
+
     # check if agent is running
-    kill -0 $SIGSCI_PID &>2 /dev/null
+    kill -0 $SIGSCI_PID 2>/dev/null
 
     # if not running, reassign port so app can start.
     if [ $? -ne 0 ];
