@@ -18,7 +18,7 @@ Application developers will need to specify the buildpack with the `cf push` com
 
 ### Configuration
 
-To configure the Signal Sciences agent the following enviornment variables must be set:
+To configure the Signal Sciences agent the following environment variables must be set:
 
 `SIGSCI_ACCESSKEYID` (required)
 
@@ -40,4 +40,4 @@ In order to have these changes take effect, you must at least re-stage your app:
 
 ### Signal Sciences Agent
 
-Every time this buildpack runs it will download and install the latest version of the Signal Sciences agent, unless a version specified in the app's environment.
+Every time this buildpack runs it will download and install the latest version of the Signal Sciences agent, unless a version is specified in the app's `SIGSCI_AGENT_VERSION` environment var.
