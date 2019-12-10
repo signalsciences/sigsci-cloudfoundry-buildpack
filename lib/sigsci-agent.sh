@@ -103,8 +103,24 @@ then
     (>&2 echo "-----> SIGSCI AGENT WILL NOT BE INSTALLED!")
 
   else
-    echo "-----> Downloading and installing sigsci-agent"
-    curl -s --retry 45 --retry-delay 2 https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz | tar -xz && mv sigsci-agent "${SIGSCI_DIR}/bin/sigsci-agent"
+    echo "-----> Downloading sigsci-agent"
+    curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz > /dev/null
+
+    if [ -z $SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK ]
+    then
+        curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 > /dev/null
+
+        # validate the gzip file
+        if [[ "$(shasum -c sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256)" != *"OK"* ]]
+        then
+            (>&2 echo "-----> sigsci-agent not installed because checksum integrity check failed")
+            exit 1
+        fi
+    fi
+
+    tar -xzf "sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz"
+    mv sigsci-agent "${SIGSCI_DIR}/bin/sigsci-agent"
+    echo "-----> Finished installing sigsci-agent"
 
     # do config
     PORT_LISTENER=${PORT}
