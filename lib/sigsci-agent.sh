@@ -113,7 +113,7 @@ then
         # validate the gzip file
         if [[ "$(shasum -c sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256)" != *"OK"* ]]
         then
-            (>&2 echo "-----> SHASUM CHECK DID NOT PASS")
+            (>&2 echo "-----> sigsci-agent not installed")
             exit 1
         fi
     fi
