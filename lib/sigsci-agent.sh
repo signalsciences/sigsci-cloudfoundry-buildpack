@@ -106,7 +106,7 @@ then
     echo "-----> Downloading sigsci-agent"
     curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz > /dev/null
 
-    if [ -z $NO_SIGSCI_CHECKSUM_INTEGRITY_CHECK ]
+    if [ -z $SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK ]
     then
         echo "-----> Downloading sha256 file"
         curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 > /dev/null
