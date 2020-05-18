@@ -179,7 +179,7 @@ access-log = "${SIGSCI_REVERSE_PROXY_ACCESSLOG}"
 EOT
 
     echo "==== Using /dev/stdout for debug logging ===="
-    SIGSCI_LOG_OUT=/dev/stdout
+    export SIGSCI_LOG_OUT=/dev/stdout
 
     # start agent
     echo "-----> Starting Signal Sciences Agent!"
