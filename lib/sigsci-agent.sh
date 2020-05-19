@@ -178,7 +178,6 @@ upstreams = "http://${SIGSCI_UPSTREAM}"
 access-log = "${SIGSCI_REVERSE_PROXY_ACCESSLOG}"
 EOT
 
-    echo "==== Using /dev/stdout for debug logging ===="
     export SIGSCI_LOG_OUT=/dev/stdout
 
     # start agent
