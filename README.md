@@ -5,16 +5,12 @@ This is a [supply-buildpack](https://docs.cloudfoundry.org/buildpacks/understand
 for Cloud Foundry that provides integration with the Signal Sciences agent *for any programming
 language* supported by the platform, and requiring *zero application code changes*.
 
-### Installing Signal Sciences buildpack
-
-To install the Signal Sciences buildpack on the target CloudFoundry instance from this repository:
-`./upload`
 
 ### Using the Signal Sciences buildpack
 
 Application developers will need to specify the buildpack with the `cf push` command. From [the docs](https://docs.cloudfoundry.org/buildpacks/use-multiple-buildpacks.html):
 
-`cf push YOUR-APP -b sigsci-cloudfoundry-buildpack -b APP_BUILDPACK`
+`cf push YOUR-APP -b https://github.com/signalsciences/sigsci-cloudfoundry-buildpack -b APP_BUILDPACK`
 
 ### Configuration
 
