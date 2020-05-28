@@ -10,7 +10,7 @@ language* supported by the platform, and requiring *zero application code change
 
 Application developers will need to specify the buildpack with the `cf push` command. From [the docs](https://docs.cloudfoundry.org/buildpacks/use-multiple-buildpacks.html):
 
-`cf push YOUR-APP -b https://github.com/signalsciences/sigsci-cloudfoundry-buildpack -b APP_BUILDPACK`
+`cf push YOUR-APP -b https://github.com/signalsciences/sigsci-cloudfoundry-buildpack.git -b APP_BUILDPACK`
 
 ### Configuration
 
