@@ -8,8 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build
-        run: ./make.sh
+      - name: Rename README
+        run: |
+          VERSION="$(cat VERSION)"
+          echo "Version: ${VERSION}" > README-SIGSCI.md
+          cat README.md >> README-SIGSCI.md
       - name: Get Version
         run: |
           echo ::set-env name=VERSION::$(cat VERSION)
