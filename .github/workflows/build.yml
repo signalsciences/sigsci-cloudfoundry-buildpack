@@ -16,14 +16,12 @@ jobs:
           echo "Version: ${VERSION}" > README.md
           mv README.md README-SIGSCI.md
       - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ env.VERSION }}
-          release_name: Release ${{ env.VERSION }}
+          tag: ${{ env.VERSION }}
+          name: "Release ${{ env.VERSION }}"
           body: |
             Changes in this Release
             - Adds GitHub Actions pipeline
-            draft: false
-            prerelease: false
+          artifacts: "bin/*,lib/*,README-SIGSCI.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
