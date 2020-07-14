@@ -1,7 +1,7 @@
 name: build sigsci-cloudfoundry-buildpack
 on:
   push:
-    branches: bbucher-23974-release-pipeline
+    branches: master
 jobs:
   build:
     runs-on: ubuntu-latest
