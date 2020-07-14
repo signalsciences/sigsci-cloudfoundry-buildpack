@@ -17,6 +17,7 @@ jobs:
         run: |
           echo "Version: ${VERSION}" > README-SIGSCI.md
           cat README.md >> README-SIGSCI.md
+          rm README.md
       - name: Commit files
         run: |
           git config --local user.email "action@github.com"
