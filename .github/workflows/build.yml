@@ -26,6 +26,7 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
+          force: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
         uses: actions/create-release@v1
