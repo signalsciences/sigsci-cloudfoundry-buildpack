@@ -33,4 +33,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -u ${{ github.actor }}:${{ github.token }} -d '{"tag_name":"${{ env.VERSION }}", "target_commitish":"${{ env.VERSION }}", "name":"Release ${{ env.VERSION }}", "draft":false, "prerelease":false, "body":"This\\nIs\\nA\Test\\n"}' -H "Content-Type: application/json" -X POST https://api.github.com/repos/signalsciences/sigsci-cloudfoundry-buildpack/releases
+          curl -u ${{ github.actor }}:${{ github.token }} -d '{"tag_name":"${{ env.VERSION }}", "target_commitish":"${{ env.VERSION }}", "name":"Release ${{ env.VERSION }}", "draft":false, "prerelease":false, "body":"This\\nIs\\nA\\nTest\\n"}' -H "Content-Type: application/json" -X POST https://api.github.com/repos/signalsciences/sigsci-cloudfoundry-buildpack/releases
