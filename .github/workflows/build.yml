@@ -2,20 +2,30 @@ name: build sigsci-cloudfoundry-buildpack
 on:
   push:
     branches: bbucher-23974-release-pipeline
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
       - name: Get Version
         run: |
           echo ::set-env name=VERSION::$(cat VERSION)
       - name: Rename README
         run: |
-          echo "Version: ${VERSION}" > .github/README.md
-          mv .github/README.md .github/README-SIGSCI.md
-
+          echo "Version: ${VERSION}" > README-SIGSCI.md
+          cat README.md >> README-SIGSCI.md
+      - name: Commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "Rename README.md to README-SIGSCI.md" -a
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
         uses: actions/create-release@v1
         env:
