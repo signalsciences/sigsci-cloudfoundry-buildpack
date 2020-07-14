@@ -26,17 +26,11 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
-          force: true
+          branch: ${{ env.VERSION }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.VERSION }}
-          release_name: Release ${{ env.VERSION }}
-          body: |
-            Changes in this Release
-            - Adds GitHub Actions pipeline
-            draft: false
-            prerelease: false
+        run: |
+          curl -u ${{ github.actor }}:${{ github.token }} -d '{"tag_name":${{ env.VERSION }}, "target_commitish":${{ env.VERSION }}, "name":${{ env.VERSION }}, "draft":false, "prerelease":false}' -H "Content-Type: application/json" -X POST https://api.github.com/repos/signalsciences/sigsci-cloudfoundry-buildpack/releases
