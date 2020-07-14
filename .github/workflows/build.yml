@@ -13,15 +13,20 @@ jobs:
           echo ::set-env name=VERSION::$(cat VERSION)
       - name: Rename README
         run: |
+          echo "Version: ${VERSION}" > README-SIGSCI.md
+          cat README.md >> README-SIGSCI.md
           echo "Version: ${VERSION}" > README.md
           mv README.md README-SIGSCI.md
+
       - name: Create Release
-        uses: ncipollo/release-action@v1
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag: ${{ env.VERSION }}
-          name: "Release ${{ env.VERSION }}"
+          tag_name: ${{ env.VERSION }}
+          release_name: Release ${{ env.VERSION }}
           body: |
             Changes in this Release
             - Adds GitHub Actions pipeline
-          artifacts: "bin/*,lib/*,README-SIGSCI.md"
-          token: ${{ secrets.GITHUB_TOKEN }}
+            draft: false
+            prerelease: false
