@@ -1,8 +1,7 @@
 name: release sigsci-cloudfoundry-buildpack
 on:
   release:
-    types:
-      - published
+    types: [published, created, released]
 jobs:
   build:
     runs-on: ubuntu-latest
