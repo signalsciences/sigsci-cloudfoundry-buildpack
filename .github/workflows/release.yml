@@ -7,12 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Get Version
-        run: |
-          echo ::set-env name=VERSION::$(cat VERSION)
-      - name: Get Commit Messages
-        run: |
-          echo ::set-env name=COMMIT_MESSAGES::$(curl -u ${{ github.actor }}:${{ github.token }} "https://api.github.com/repos/signalsciences/sigsci-cloudfoundry-buildpack/commits/${{ github.sha }}" | jq .commit.message)
       - name: Create Release Asset
         run: |
           tar -zcvf sigsci-cloudfoundry-buildpack.tar.gz bin/ lib/
