@@ -1,41 +1,24 @@
-name: build sigsci-cloudfoundry-buildpack
+name: release sigsci-cloudfoundry-buildpack
 on:
-  push:
-    branches: bbucher-23974-release-pipeline
+  release:
+    types: [published, created, released]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Get Version
+      - name: Create Release Asset
         run: |
-          echo ::set-env name=VERSION::$(cat VERSION)
-      - name: Rename README
+          tar -zcvf sigsci-cloudfoundry-buildpack.tar.gz bin/ lib/
+      - name: Get Upload URL
         run: |
-          echo "Version: ${VERSION}" > README-SIGSCI.md
-          cat README.md >> README-SIGSCI.md
-      - name: Commit files
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add README-SIGSCI.md
-          git commit -m "Rename README.md to README-SIGSCI.md" -a
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create Release
-        uses: actions/create-release@v1
+          echo ::set-env name=RELEASE_URL::${{ github.event.release.url }}
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.VERSION }}
-          release_name: Release ${{ env.VERSION }}
-          body: |
-            Changes in this Release
-            - Adds GitHub Actions pipeline
-            draft: false
-            prerelease: false
+          upload_url: ${{ env.RELEASE_URL }}
+          asset_path: ./sigsci-cloudfoundry-buildpack.tar.gz
+          asset_name: sigsci-cloudfoundry-buildpack.tar.gz
+          asset_content_type: application/gzip
