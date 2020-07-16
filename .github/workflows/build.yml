@@ -12,7 +12,7 @@ jobs:
           tar -zcvf sigsci-cloudfoundry-buildpack.tar.gz bin/ lib/
       - name: Get Upload URL
         run: |
-          upload_url="${{ github.event.release.upload_url }}" | cut -f1 -d"{"
+          upload_url="${{ github.event.release.upload_url }} | cut -f1 -d'{'"
           echo $upload_url
           echo ::set-env name=UPLOAD_URL::$upload_url
       - name: Upload Release Asset
