@@ -12,13 +12,14 @@ jobs:
           tar -zcvf sigsci-cloudfoundry-buildpack.tar.gz bin/ lib/
       - name: Get Upload URL
         run: |
-          echo ::set-env name=RELEASE_URL::${{ github.event.release.upload_url }} | cut -f1 -d"{"
+          upload_url="${{ github.event.release.upload_url }}" | cut -f1 -d"{"
+          echo ::set-env name=UPLOAD_URL::$upload_url
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ env.RELEASE_URL }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./sigsci-cloudfoundry-buildpack.tar.gz
           asset_name: sigsci-cloudfoundry-buildpack.tar.gz
           asset_content_type: application/gzip
