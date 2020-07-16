@@ -19,6 +19,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ env.RELEASE_URL }}
-          asset_path: sigsci-cloudfoundry-buildpack.tar.gz
+          asset_path: ./sigsci-cloudfoundry-buildpack.tar.gz
           asset_name: sigsci-cloudfoundry-buildpack.tar.gz
           asset_content_type: application/gzip
