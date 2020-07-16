@@ -37,3 +37,12 @@ In order to have these changes take effect, you must at least re-stage your app:
 ### Signal Sciences Agent
 
 Every time this buildpack runs it will download and install the latest version of the Signal Sciences agent, unless a version is specified in the app's `SIGSCI_AGENT_VERSION` environment var.
+
+### Releasing the Buildpack
+
+Follow these steps to release a new version of the buildpack:
+
+1. Merge your changes to master.
+2. Create a new release on the [releases](https://github.com/signalsciences/sigsci-cloudfoundry-buildpack/releases/new) page.
+3. Upon creation of the release, a [workflow](https://github.com/signalsciences/sigsci-cloudfoundry-buildpack/actions) should execute.
+4. The workflow will create a tar.gz archive of the bin/ and lib/ directories, and upload it to the release created in step #2.
