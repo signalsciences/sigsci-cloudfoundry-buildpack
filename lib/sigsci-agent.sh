@@ -172,6 +172,7 @@ then
 
     cat > ${SIGSCI_CONFIG_FILE} <<EOT
 # Signal Sciences Reverse Proxy Config
+server-flavor = "sigsci-module-cloudfoundry"
 [revproxy-listener.http]
 listener = "http://0.0.0.0:${PORT_LISTENER}"
 upstreams = "http://${SIGSCI_UPSTREAM}"
