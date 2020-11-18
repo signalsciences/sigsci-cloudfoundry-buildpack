@@ -7,25 +7,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build project
+      - name: Create Release Asset
         run: |
           tar -zcvf sigsci-cloudfoundry-buildpack.tar.gz bin/ lib/
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+      - name: Get Upload URL
+        run: |
+          upload_url="${{ github.event.release.upload_url }}"
+          echo $upload_url
+          echo ::set-env name=UPLOAD_URL::$upload_url
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./sigsci-cloudfoundry-buildpack.tar.gz
           asset_name: sigsci-cloudfoundry-buildpack.tar.gz
           asset_content_type: application/gzip
