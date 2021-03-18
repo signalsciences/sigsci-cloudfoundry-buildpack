@@ -1,8 +1,8 @@
 echo "-----> SUPPLY Installing signalsciences cloudfoundry scripts"
 
 $buildDir = $args[0]
-#$depsDir = $args[2]
-#$index = $args[3]
+$depsDir = $args[2]
+$index = $args[3]
 
 # create the .profile.d dir
 $profileDir = Join-Path $buildDir -ChildPath '.profile.d'

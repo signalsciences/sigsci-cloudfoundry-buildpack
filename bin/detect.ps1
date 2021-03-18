@@ -1,3 +1,7 @@
 echo "running sigsci buildpack detect step on windows"
 
-exit 0
+if ($env:OS -eq "Windows_NT") {
+    exit 0
+} else {
+    exit 1
+}
