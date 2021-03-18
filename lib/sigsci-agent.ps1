@@ -64,6 +64,67 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         Write-Output "-----> Finished installing sigsci-agent"
 
         # configure the agent
+        $port_listener = $Env:PORT
+        $port_upstream = 8081
+        $sigsci_upstream = "127.0.0.1:$port_upstream"
+        $sigsci_config_file = $sigsci_dir\conf\agent.conf
+
+        # optional config variable, if not provided default value will be used.
+
+        # reverse proxy upstream
+        if (-not(Test-Path env:SIGSCI_REVERSE_PROXY_UPSTREAM))
+        {
+            Write-Output "-----> SIGSCI_REVERSE_PROXY_UPSTREAM not provided, using default: $sigsci_upstream"
+        }
+        else
+        {
+            $sigsci_upstream = $Env:SIGSCI_REVERSE_PROXY_UPSTREAM
+            $port_upstream = $sigsci_upstream.split(':')[1]
+        }
+
+        # reverse proxy accesslog - disable access logging by default.
+        if (-not(Test-Path env:SIGSCI_REVERSE_PROXY_ACCESSLOG))
+        {
+            $sigsci_reverse_proxy_accesslog = ''
+        }
+
+        # require signal sciences agent for app to start.
+        # this prevent port reassignment in the event the agent fails to start.
+        # as a result, cloud foundry will detect the app as unhealthy.
+        # default is to not require the agent.
+        if (-not(Test-Path env:SIGSCI_REQUIRED))
+        {
+            $sigsci_required = "false"
+        }
+
+        # health check - disable by default.
+        if (-not(Test-Path env:SIGSCI_HC))
+        {
+            $sigsci_hc = "false"
+        }
+
+        # health check - initial sleep.
+        if (-not(Test-Path env:SIGSCI_HC_INIT_SLEEP))
+        {
+            $sigsci_hc_init_sleep = 30
+        }
+
+        # reassign PORT for application process.
+        $Env:PORT = $port_upstream
+
+        $sigsci_config = @"
+        server-flavor = "sigsci-module-cloudfoundry"
+        # Signal Sciences Reverse Proxy Config
+        [revproxy-listener.http]
+        listener = "http://0.0.0.0:$port_listener"
+        upstreams = "http://$sigsci_upstream"
+        access-log = "$sigsci_reverse_proxy_accesslog"
+        "@
+
+        $sigsci_config -f 'string' | Out-File $sigsci_config_file
+
+        # start the agent
+        Write-Output "-----> Starting Signal Sciences Agent!"
 
     }
 }
