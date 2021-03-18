@@ -47,7 +47,24 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         if (-not(Test-Path env:SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK))
         {
             # download the .sha256 file
+            Invoke-WebRequest -MaximumRetryCount 45 -RetryIntervalSec 2 `
+                -OutFile "sigsci-agent_$sigsci_agent_version.zip.sha256" `
+                -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip.sha256"
+
+            $computed_hash = (Get-FileHash -Algorithm SHA256 "./sigsci-agent_$sigsci_agent_version.zip").Hash
+            $hash = Select-String -Path "./sigsci-agent_$sigsci_agent_version.zip.sha256" -Pattern  $computed_hash -Quiet
+            if (-not (Select-String -Path "./sigsci-agent_$sigsci_agent_version.zip.sha256" -Pattern $computed_hash -Quiet))
+            {
+                Write-Output "-----> sigsci-agent not installed because checksum integrity check failed"
+                exit 1
+            }
         }
+
+        Expand-Archive -Path "sigsci-agent_$sigsci_agent_version.zip" -DestinationPath $sigsci_dir\bin
+        Write-Output "-----> Finished installing sigsci-agent"
+
+        # configure the agent
+
     }
 }
 else
