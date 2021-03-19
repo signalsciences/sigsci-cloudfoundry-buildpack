@@ -1,5 +1,10 @@
 echo "Setting up sigsci agent"
 
+Function health_check()
+{
+    Start-Job -ScriptBlock { Get-Process -Name sigsci-agent.exe }
+}
+
 # check if the PORT envirornment variable is set
 if (-not (Test-Path env:PORT))
 {
@@ -20,18 +25,12 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
     # if agent version not specified then get the latest version.
     if (-not (Test-Path env:SIGSCI_AGENT_VERSION))
     {
-        $sigsci_agent_version = (Invoke-WebRequest `
-                                    -MaximumRetryCount 45 `
-                                    -RetryIntervalSec 2 `
-                                    -Uri 'https://dl.signalsciences.net/sigsci-agent/VERSION').Content.TrimEnd("`r?`n")
+        $sigsci_agent_version = (Invoke-WebRequest -UseBasicParsing -Uri 'https://dl.signalsciences.net/sigsci-agent/VERSION').Content.TrimEnd("`r?`n")
 
     }
 
     # check if $sigsci_agent_version exists
-    $status = (Invoke-WebRequest `
-        -MaximumRetryCount 45 `
-        -RetryIntervalSec 2 `
-        -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/VERSION").StatusCode
+    $status = (Invoke-WebRequest -UseBasicParsing -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/VERSION").StatusCode
 
     if (-not ($status -eq 200))
     {
@@ -40,14 +39,13 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         Write-Output "-----> SIGSCI AGENT WILL NOT BE INSTALLED!"
     } else {
         Write-Output "-----> Downloading sigsci-agent"
-        Invoke-WebRequest -MaximumRetryCount 45 -RetryIntervalSec 2 `
-            -OutFile "sigsci-agent_$sigsci_agent_version.zip" `
-            -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip"
+        Invoke-WebRequest -UseBasicParsing -OutFile "sigsci-agent_$sigsci_agent_version.zip" `
+                -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip"
 
         if (-not(Test-Path env:SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK))
         {
             # download the .sha256 file
-            Invoke-WebRequest -MaximumRetryCount 45 -RetryIntervalSec 2 `
+            Invoke-WebRequest -UseBasicParsing `
                 -OutFile "sigsci-agent_$sigsci_agent_version.zip.sha256" `
                 -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip.sha256"
 
@@ -67,7 +65,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         $port_listener = $Env:PORT
         $port_upstream = 8081
         $sigsci_upstream = "127.0.0.1:$port_upstream"
-        $sigsci_config_file = $sigsci_dir\conf\agent.conf
+        $sigsci_config_file = "$sigsci_dir\conf\agent.conf"
 
         # optional config variable, if not provided default value will be used.
 
@@ -113,19 +111,71 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         $Env:PORT = $port_upstream
 
         $sigsci_config = @"
-        server-flavor = "sigsci-module-cloudfoundry"
-        # Signal Sciences Reverse Proxy Config
-        [revproxy-listener.http]
-        listener = "http://0.0.0.0:$port_listener"
-        upstreams = "http://$sigsci_upstream"
-        access-log = "$sigsci_reverse_proxy_accesslog"
-        "@
+server-flavor = "sigsci-module-cloudfoundry"
+# Signal Sciences Reverse Proxy Config
+[revproxy-listener.http]
+listener = "http://0.0.0.0:$($port_listener)"
+upstreams = "http://$($sigsci_upstream)"
+access-log = "$($sigsci_reverse_proxy_accesslog)"
+"@
 
         $sigsci_config -f 'string' | Out-File $sigsci_config_file
 
         # start the agent
         Write-Output "-----> Starting Signal Sciences Agent!"
 
+        # Remove any deprecated reverse proxy config options
+        if (Test-Path env:SIGSCI_REVERSE_PROXY_*)
+        {
+            Copy-Item -Path Env:SIGSCI_REVERSE_PROXY_* -Destination Env:SIGSCI_REVPROXY
+        }
+
+        Write-Output "!!!I'm currently in $pwd"
+        Write-Output "!!!sigsci_dir is $sigsci_dir"
+        Start-Process "$sigsci_dir\bin\sigsci-agent.exe --config="$sigsci_config_file"" `
+            -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden
+
+        # wait for agent to start
+        Start-Sleep -s 5
+
+        # Check if agent is running. If not, reassign port so app can start.
+        if (-not(Get-Process sigsci-agent))
+        {
+            if (env:SIGSCI_REQUIRED -eq "true")
+            {
+                Write-Output "-----> Signal Sciences failed to start!"
+                Write-Output "-----> SIGSCI_REQUIRED is enabled, port reassignment will not occur and app will be unhealthy!!!"
+            } else {
+                $Env:PORT = $port_listener
+                Write-Output "-----> Signal Sciences failed to start!"
+                Write-Output "-----> Deploying application without Signal Sciences enabled!!!"
+            }
+        } else {
+            if (env:SIGSCI_HC -eq "true")
+            {
+                Write-Output "-----> sigsci-agent health checks enabled. Health checks will start in $sigsci_hc_init_sleep seconds."
+                # HC_CONFIG fields:
+                # <frequency>:<endpoint>:<listener status>:<listener warning>:<upstream status>:<upstream warning>
+                #
+                # frequency - how often to perform the check in seconds, e.g. every 5 seconds.
+                # endpoint - which endpoint to check for both the listener and upstream process.
+                # listener status - the status code that not healthy and will trigger killing the agent.
+                # listener warning - the number of times the check can fail before killing the agent.
+                # upstream status = the status code that is healthy, any other code will trigger killing the agent.
+                # upstream warning - the number of times the check can fail before killing the agent.
+                #
+                # Note: the listener port is defined by the PORT_LISTENER variable.
+                # Note: the upstream port is defined by the PORT_UPSTREAM variable.
+                # Note: the PID to kill is defined by the SIGSCI_PID variable.
+                #
+                if (-not(env:SIGSCI_HC_CONFIG))
+                {
+                    $ENV:SIGSCI_HC_CONFIG = "5:/:502:5:200:3"
+                }
+
+                # call hc func
+            }
+        }
     }
 }
 else
