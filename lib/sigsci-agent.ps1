@@ -1,7 +1,18 @@
 echo "Setting up sigsci agent"
 
-Function health_check()
+Function health_check([string[]]$hc_config, [string]$listener_port, [string]$upstream_port)
 {
+    $hc_frequency = $hc_config[0]
+    $hc_endpoint = $hc_config[1]
+    $hc_listener_kill_on_status = $hc_config[2]
+    $hc_listener_warning = $hc_config[3]
+    $hc_upstream_kill_not_status = $hc_config[4]
+    $hc_upstream_warning = $hc_config[5]
+    $hc_listener_port = $listener_port
+    $hc_upstream_port = $upstream_port
+
+    $listener_warning_count = 0
+    $upstream_warning_count = 0
     Start-Job -ScriptBlock { Get-Process -Name sigsci-agent.exe }
 }
 
@@ -49,6 +60,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
                 -OutFile "sigsci-agent_$sigsci_agent_version.zip.sha256" `
                 -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip.sha256"
 
+            # compute hash and verify against .sha256
             $computed_hash = (Get-FileHash -Algorithm SHA256 "./sigsci-agent_$sigsci_agent_version.zip").Hash
             $hash = Select-String -Path "./sigsci-agent_$sigsci_agent_version.zip.sha256" -Pattern  $computed_hash -Quiet
             if (-not (Select-String -Path "./sigsci-agent_$sigsci_agent_version.zip.sha256" -Pattern $computed_hash -Quiet))
@@ -67,7 +79,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         $sigsci_upstream = "127.0.0.1:$port_upstream"
         $sigsci_config_file = "$sigsci_dir\conf\agent.conf"
 
-        # optional config variable, if not provided default value will be used.
+        # optional config environment variables, if not provided default value will be used.
 
         # reverse proxy upstream
         if (-not(Test-Path env:SIGSCI_REVERSE_PROXY_UPSTREAM))
@@ -83,7 +95,11 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # reverse proxy accesslog - disable access logging by default.
         if (-not(Test-Path env:SIGSCI_REVERSE_PROXY_ACCESSLOG))
         {
-            $sigsci_reverse_proxy_accesslog = ''
+            $script:sigsci_reverse_proxy_accesslog = ''
+        }
+        else
+        {
+            $script:sigsci_reverse_proxy_accesslog = $Env:SIGSCI_REVERSE_PROXY_ACCESSLOG
         }
 
         # require signal sciences agent for app to start.
@@ -92,19 +108,55 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # default is to not require the agent.
         if (-not(Test-Path env:SIGSCI_REQUIRED))
         {
-            $sigsci_required = "false"
+            $script:sigsci_required = "false"
+        }
+        else
+        {
+            $script:sigsci_required = $Env:SIGSCI_REQUIRED
         }
 
         # health check - disable by default.
         if (-not(Test-Path env:SIGSCI_HC))
         {
-            $sigsci_hc = "false"
+            $script:sigsci_hc = "false"
+        }
+        else
+        {
+            $script:sigsci_hc = $Env:SIGSCI_HC
         }
 
         # health check - initial sleep.
         if (-not(Test-Path env:SIGSCI_HC_INIT_SLEEP))
         {
-            $sigsci_hc_init_sleep = 30
+            $script:sigsci_hc_init_sleep = 30
+        }
+        else
+        {
+            $script:sigsci_hc_init_sleep = $Env:SIGSCI_HC_INIT_SLEEP
+        }
+
+        # health check config
+        #
+        # HC_CONFIG fields:
+        # <frequency>:<endpoint>:<listener status>:<listener warning>:<upstream status>:<upstream warning>
+        #
+        # frequency - how often to perform the check in seconds, e.g. every 5 seconds.
+        # endpoint - which endpoint to check for both the listener and upstream process.
+        # listener status - the status code that not healthy and will trigger killing the agent.
+        # listener warning - the number of times the check can fail before killing the agent.
+        # upstream status = the status code that is healthy, any other code will trigger killing the agent.
+        # upstream warning - the number of times the check can fail before killing the agent.
+        #
+        # Note: the listener port is defined by the PORT_LISTENER variable.
+        # Note: the upstream port is defined by the PORT_UPSTREAM variable.
+        # Note: the PID to kill is defined by the SIGSCI_PID variable.
+        if (-not(Test-Path env:SIGSCI_HC_CONFIG))
+        {
+            $sigsci_hc_config = @('5','/','502','5','200','3')
+        }
+        else
+        {
+            $sigsci_hc_config = "$Env:SIGSCI_HC_CONFIG".split(":")
         }
 
         # reassign PORT for application process.
@@ -134,7 +186,7 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
         Write-Output "!!!sigsci_dir is $sigsci_dir"
         Write-Output "!!!sigsci_config_file is $sigsci_config_file"
         Start-Process $sigsci_dir\bin\sigsci-agent.exe --config="$sigsci_config_file" `
-            -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden
+            -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden -PassThru
 
         # wait for agent to start
         Start-Sleep -s 5
@@ -152,27 +204,10 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
                 Write-Output "-----> Deploying application without Signal Sciences enabled!!!"
             }
         } else {
-            if ($Env:SIGSCI_HC -eq "true")
+            Write-Output "!!!sigsci-agent started"
+            if ($sigsci_hc -eq "true")
             {
                 Write-Output "-----> sigsci-agent health checks enabled. Health checks will start in $sigsci_hc_init_sleep seconds."
-                # HC_CONFIG fields:
-                # <frequency>:<endpoint>:<listener status>:<listener warning>:<upstream status>:<upstream warning>
-                #
-                # frequency - how often to perform the check in seconds, e.g. every 5 seconds.
-                # endpoint - which endpoint to check for both the listener and upstream process.
-                # listener status - the status code that not healthy and will trigger killing the agent.
-                # listener warning - the number of times the check can fail before killing the agent.
-                # upstream status = the status code that is healthy, any other code will trigger killing the agent.
-                # upstream warning - the number of times the check can fail before killing the agent.
-                #
-                # Note: the listener port is defined by the PORT_LISTENER variable.
-                # Note: the upstream port is defined by the PORT_UPSTREAM variable.
-                # Note: the PID to kill is defined by the SIGSCI_PID variable.
-                #
-                if (-not($Env:SIGSCI_HC_CONFIG))
-                {
-                    $Env:SIGSCI_HC_CONFIG = "5:/:502:5:200:3"
-                }
 
                 # call hc func
             }
