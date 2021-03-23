@@ -111,15 +111,15 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         $Env:PORT = $port_upstream
 
         $sigsci_config = @"
-server-flavor = "sigsci-module-cloudfoundry"
+server-flavor="sigsci-module-cloudfoundry"
 # Signal Sciences Reverse Proxy Config
-[revproxy-listener.http]
-listener = "http://0.0.0.0:$($port_listener)"
-upstreams = "http://$($sigsci_upstream)"
-access-log = "$($sigsci_reverse_proxy_accesslog)"
+[revproxy-listener.http2]
+listener="http://0.0.0.0:$($port_listener)"
+upstreams="http://$($sigsci_upstream)"
+access-log="$($sigsci_reverse_proxy_accesslog)"
 "@
 
-        $sigsci_config -f 'string' | Out-File $sigsci_config_file
+        $sigsci_config -f 'string' | Out-File $sigsci_config_file -Encoding ascii
 
         # start the agent
         Write-Output "-----> Starting Signal Sciences Agent!"
@@ -127,12 +127,13 @@ access-log = "$($sigsci_reverse_proxy_accesslog)"
         # Remove any deprecated reverse proxy config options
         if (Test-Path env:SIGSCI_REVERSE_PROXY_*)
         {
-            Copy-Item -Path Env:SIGSCI_REVERSE_PROXY_* -Destination Env:SIGSCI_REVPROXY
+            Copy-Item -Path $Env:SIGSCI_REVERSE_PROXY_* -Destination $Env:SIGSCI_REVPROXY
         }
 
         Write-Output "!!!I'm currently in $pwd"
         Write-Output "!!!sigsci_dir is $sigsci_dir"
-        Start-Process "$sigsci_dir\bin\sigsci-agent.exe --config="$sigsci_config_file"" `
+        Write-Output "!!!sigsci_config_file is $sigsci_config_file"
+        Start-Process $sigsci_dir\bin\sigsci-agent.exe --config="$sigsci_config_file" `
             -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden
 
         # wait for agent to start
@@ -141,7 +142,7 @@ access-log = "$($sigsci_reverse_proxy_accesslog)"
         # Check if agent is running. If not, reassign port so app can start.
         if (-not(Get-Process sigsci-agent))
         {
-            if (env:SIGSCI_REQUIRED -eq "true")
+            if ($Env:SIGSCI_REQUIRED -eq "true")
             {
                 Write-Output "-----> Signal Sciences failed to start!"
                 Write-Output "-----> SIGSCI_REQUIRED is enabled, port reassignment will not occur and app will be unhealthy!!!"
@@ -151,7 +152,7 @@ access-log = "$($sigsci_reverse_proxy_accesslog)"
                 Write-Output "-----> Deploying application without Signal Sciences enabled!!!"
             }
         } else {
-            if (env:SIGSCI_HC -eq "true")
+            if ($Env:SIGSCI_HC -eq "true")
             {
                 Write-Output "-----> sigsci-agent health checks enabled. Health checks will start in $sigsci_hc_init_sleep seconds."
                 # HC_CONFIG fields:
@@ -168,9 +169,9 @@ access-log = "$($sigsci_reverse_proxy_accesslog)"
                 # Note: the upstream port is defined by the PORT_UPSTREAM variable.
                 # Note: the PID to kill is defined by the SIGSCI_PID variable.
                 #
-                if (-not(env:SIGSCI_HC_CONFIG))
+                if (-not($Env:SIGSCI_HC_CONFIG))
                 {
-                    $ENV:SIGSCI_HC_CONFIG = "5:/:502:5:200:3"
+                    $Env:SIGSCI_HC_CONFIG = "5:/:502:5:200:3"
                 }
 
                 # call hc func
