@@ -1,6 +1,6 @@
 echo "Setting up sigsci agent"
 
-Function health_check([string[]]$hc_config, [string]$listener_port, [string]$upstream_port)
+Function health_check([string[]]$hc_config, [string]$listener_port, [string]$upstream_port, [int]$initial_sleep)
 {
     $hc_frequency = $hc_config[0]
     $hc_endpoint = $hc_config[1]
@@ -13,7 +13,27 @@ Function health_check([string[]]$hc_config, [string]$listener_port, [string]$ups
 
     $listener_warning_count = 0
     $upstream_warning_count = 0
-    Start-Job -ScriptBlock { Get-Process -Name sigsci-agent.exe }
+
+    # health check logic
+    $hc = {
+        Start-Sleep -s $hc_frequency
+        # check the listener process
+        $listener_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_listener_port$hc_endpoint" -TimeoutSec 3).StatusCode
+
+        # check the upstream process
+        $upstream_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_upstream_port$hc_endpoint" -TimeoutSec 3).StatusCode
+
+        if (($listener_status -eq $hc_listener_kill_on_status) -or (000 -eq $listener_status))
+        {
+            $listener_warning_count++
+
+            Write-Output ""
+        }
+    }
+    Start-Sleep -s $initial_sleep
+
+
+    Register-ScheduledJob -Name "SigSci-HealthCheck" -ScriptBlock {}
 }
 
 # check if the PORT envirornment variable is set
@@ -95,11 +115,11 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # reverse proxy accesslog - disable access logging by default.
         if (-not(Test-Path env:SIGSCI_REVERSE_PROXY_ACCESSLOG))
         {
-            $script:sigsci_reverse_proxy_accesslog = ''
+            $sigsci_reverse_proxy_accesslog = ''
         }
         else
         {
-            $script:sigsci_reverse_proxy_accesslog = $Env:SIGSCI_REVERSE_PROXY_ACCESSLOG
+            $sigsci_reverse_proxy_accesslog = $Env:SIGSCI_REVERSE_PROXY_ACCESSLOG
         }
 
         # require signal sciences agent for app to start.
@@ -108,31 +128,31 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # default is to not require the agent.
         if (-not(Test-Path env:SIGSCI_REQUIRED))
         {
-            $script:sigsci_required = "false"
+            $sigsci_required = "false"
         }
         else
         {
-            $script:sigsci_required = $Env:SIGSCI_REQUIRED
+            $sigsci_required = $Env:SIGSCI_REQUIRED
         }
 
         # health check - disable by default.
         if (-not(Test-Path env:SIGSCI_HC))
         {
-            $script:sigsci_hc = "false"
+            $sigsci_hc = "false"
         }
         else
         {
-            $script:sigsci_hc = $Env:SIGSCI_HC
+            $sigsci_hc = $Env:SIGSCI_HC
         }
 
         # health check - initial sleep.
         if (-not(Test-Path env:SIGSCI_HC_INIT_SLEEP))
         {
-            $script:sigsci_hc_init_sleep = 30
+            $sigsci_hc_init_sleep = 30
         }
         else
         {
-            $script:sigsci_hc_init_sleep = $Env:SIGSCI_HC_INIT_SLEEP
+            $sigsci_hc_init_sleep = $Env:SIGSCI_HC_INIT_SLEEP
         }
 
         # health check config
