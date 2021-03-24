@@ -16,24 +16,62 @@ Function health_check([string[]]$hc_config, [string]$listener_port, [string]$ups
 
     # health check logic
     $hc = {
-        Start-Sleep -s $hc_frequency
-        # check the listener process
-        $listener_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_listener_port$hc_endpoint" -TimeoutSec 3).StatusCode
-
-        # check the upstream process
-        $upstream_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_upstream_port$hc_endpoint" -TimeoutSec 3).StatusCode
-
-        if (($listener_status -eq $hc_listener_kill_on_status) -or (000 -eq $listener_status))
+        while ($true)
         {
-            $listener_warning_count++
+            Start-Sleep -s $hc_frequency
+            # check the listener process
+            $listener_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_listener_port$hc_endpoint" -TimeoutSec 3).StatusCode
 
-            Write-Output ""
+            # check the upstream process
+            $upstream_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_upstream_port$hc_endpoint" -TimeoutSec 3).StatusCode
+
+            if (($listener_status -eq $hc_listener_kill_on_status) -or (000 -eq $listener_status))
+            {
+                $listener_warning_count++
+
+                if ($listener_warning_count -gt $hc_listener_warning)
+                {
+                    Write-Output "Listener became unhealthy! Killing sigsci-agent.exe process"
+                    Stop-Process -Name "sigsci-agent"
+                    return
+                }
+                else
+                {
+                    Write-Output "WARNING: sigsci-agent HC_LISTENER_WARNING at $listener_warning_count out of $hc_listener_warning."
+                }
+            }
+            else
+            {
+                $listener_warning_count = 0
+            }
+
+            # verify upstream status
+            if (($upstream_status -ne $hc_upstream_kill_not_status) -or ( 000 -eq $upstream_status))
+            {
+                $upstream_warning_count++
+
+                if ($upstream_warning_count -gt $hc_upstream_warning)
+                {
+                    Write-Output "Upstream became unhealthy! Killing sigsci-agent.exe process"
+                    Stop-Process -Name "sigsci-agent"
+                    return
+                }
+                else
+                {
+                    Write-Output "WARNING: sigsci-agent HC_UPSTREAM_WARNING at $upstream_warning_count out of $hc_upstream_warning."
+                }
+            }
+            else
+            {
+                $upstream_warning_count = 0
+            }
         }
     }
+
     Start-Sleep -s $initial_sleep
 
 
-    Register-ScheduledJob -Name "SigSci-HealthCheck" -ScriptBlock {}
+    Start-Job -Name "SigSci-HealthCheck" -ScriptBlock $hc
 }
 
 # check if the PORT envirornment variable is set
