@@ -134,7 +134,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # configure the agent
         $port_listener = $Env:PORT
         $port_upstream = 8081
-        $sigsci_upstream = "127.0.0.1:$port_upstream"
+        $sigsci_upstream = "0.0.0.0:$port_upstream"
         $sigsci_config_file = "$sigsci_dir\conf\agent.conf"
 
         # optional config environment variables, if not provided default value will be used.
@@ -153,7 +153,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # reverse proxy accesslog - disable access logging by default.
         if (-not(Test-Path env:SIGSCI_REVERSE_PROXY_ACCESSLOG))
         {
-            $sigsci_reverse_proxy_accesslog = ''
+            $sigsci_reverse_proxy_accesslog = 'access.log'
         }
         else
         {
@@ -218,12 +218,13 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         }
 
         # reassign PORT for application process.
-        $Env:PORT = $port_upstream
+        [Environment]::SetEnvironmentVariable("PORT", $port_upstream, 'User')
+        # $Env:PORT = $port_upstream
 
         $sigsci_config = @"
 server-flavor="sigsci-module-cloudfoundry"
 # Signal Sciences Reverse Proxy Config
-[revproxy-listener.http2]
+[revproxy-listener.http]
 listener="http://0.0.0.0:$($port_listener)"
 upstreams="http://$($sigsci_upstream)"
 access-log="$($sigsci_reverse_proxy_accesslog)"
@@ -234,15 +235,6 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
         # start the agent
         Write-Output "-----> Starting Signal Sciences Agent!"
 
-        # Remove any deprecated reverse proxy config options
-        if (Test-Path env:SIGSCI_REVERSE_PROXY_*)
-        {
-            Copy-Item -Path $Env:SIGSCI_REVERSE_PROXY_* -Destination $Env:SIGSCI_REVPROXY
-        }
-
-        Write-Output "!!!I'm currently in $pwd"
-        Write-Output "!!!sigsci_dir is $sigsci_dir"
-        Write-Output "!!!sigsci_config_file is $sigsci_config_file"
         Start-Process $sigsci_dir\bin\sigsci-agent.exe --config="$sigsci_config_file" `
             -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden -PassThru
 
@@ -268,6 +260,7 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
                 Write-Output "-----> sigsci-agent health checks enabled. Health checks will start in $sigsci_hc_init_sleep seconds."
 
                 # call hc func
+                health_check($sigsci_hc_config, $port_listener, $port_upstream, $sigsci_hc_init_sleep)
             }
         }
     }
