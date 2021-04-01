@@ -55,25 +55,25 @@ function generate_hc_script {
             }
 
             # verify upstream status
-#            if (($upstream_status -ne $hc_upstream_kill_not_status) -or ( 000 -eq $upstream_status))
-#            {
-#                $upstream_warning_count++
-#
-#                if ($upstream_warning_count -gt $hc_upstream_warning)
-#                {
-#                    Write-Output "Upstream became unhealthy! Killing sigsci-agent.exe process"
-#                    Stop-Process -Name "sigsci-agent"
-#                    return
-#                }
-#                else
-#                {
-#                    Write-Output "WARNING: sigsci-agent HC_UPSTREAM_WARNING at $upstream_warning_count out of $hc_upstream_warning."
-#                }
-#            }
-#            else
-#            {
-#                $upstream_warning_count = 0
-#            }
+            if (($upstream_status -ne $hc_upstream_kill_not_status) -or ( 000 -eq $upstream_status))
+            {
+                $upstream_warning_count++
+
+                if ($upstream_warning_count -gt $hc_upstream_warning)
+                {
+                    Write-Output "Upstream became unhealthy! Killing sigsci-agent.exe process"
+                    Stop-Process -Name "sigsci-agent"
+                    return
+                }
+                else
+                {
+                    Write-Output "WARNING: sigsci-agent HC_UPSTREAM_WARNING at $upstream_warning_count out of $hc_upstream_warning."
+                }
+            }
+            else
+            {
+                $upstream_warning_count = 0
+            }
         }
     }
 
