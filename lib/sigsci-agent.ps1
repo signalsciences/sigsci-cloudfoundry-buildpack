@@ -1,21 +1,30 @@
-echo "Setting up sigsci agent"
+Write-Output "Setting up sigsci agent"
 
-Function health_check([string[]]$hc_config, [string]$listener_port, [string]$upstream_port, [int]$initial_sleep)
-{
-    $hc_frequency = $hc_config[0]
-    $hc_endpoint = $hc_config[1]
-    $hc_listener_kill_on_status = $hc_config[2]
-    $hc_listener_warning = $hc_config[3]
-    $hc_upstream_kill_not_status = $hc_config[4]
-    $hc_upstream_warning = $hc_config[5]
-    $hc_listener_port = $listener_port
-    $hc_upstream_port = $upstream_port
+function generate_hc_script {
+    $hc_script = {
+        param(
+            [string[]]$hc_config = @('5','/','502','5','200','3'),
+            [string]$hc_listener_port = "8080",
+            [string]$hc_upstream_port = "8081",
+            [string]$sigsci_dir = "$pwd\.profile.d\sigsci"
+        )
 
-    $listener_warning_count = 0
-    $upstream_warning_count = 0
+        # assign array values to variables to make reading code easier
+        $hc_frequency = $hc_config[0]
+        $hc_endpoint = $hc_config[1]
+        $hc_listener_kill_on_status = $hc_config[2]
+        $hc_listener_warning = $hc_config[3]
+        $hc_upstream_kill_not_status = $hc_config[4]
+        $hc_upstream_warning = $hc_config[5]
 
-    # health check logic
-    $hc = {
+        $listener_warning_count = 0
+        $upstream_warning_count = 0
+
+        # start the agent health check
+        Start-Sleep -s $initial_sleep
+
+        Write-Output "Starting agent health check process"
+
         while ($true)
         {
             Start-Sleep -s $hc_frequency
@@ -23,7 +32,7 @@ Function health_check([string[]]$hc_config, [string]$listener_port, [string]$ups
             $listener_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_listener_port$hc_endpoint" -TimeoutSec 3).StatusCode
 
             # check the upstream process
-            $upstream_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_upstream_port$hc_endpoint" -TimeoutSec 3).StatusCode
+            # $upstream_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_upstream_port$hc_endpoint" -TimeoutSec 3).StatusCode
 
             if (($listener_status -eq $hc_listener_kill_on_status) -or (000 -eq $listener_status))
             {
@@ -46,32 +55,41 @@ Function health_check([string[]]$hc_config, [string]$listener_port, [string]$ups
             }
 
             # verify upstream status
-            if (($upstream_status -ne $hc_upstream_kill_not_status) -or ( 000 -eq $upstream_status))
-            {
-                $upstream_warning_count++
-
-                if ($upstream_warning_count -gt $hc_upstream_warning)
-                {
-                    Write-Output "Upstream became unhealthy! Killing sigsci-agent.exe process"
-                    Stop-Process -Name "sigsci-agent"
-                    return
-                }
-                else
-                {
-                    Write-Output "WARNING: sigsci-agent HC_UPSTREAM_WARNING at $upstream_warning_count out of $hc_upstream_warning."
-                }
-            }
-            else
-            {
-                $upstream_warning_count = 0
-            }
+#            if (($upstream_status -ne $hc_upstream_kill_not_status) -or ( 000 -eq $upstream_status))
+#            {
+#                $upstream_warning_count++
+#
+#                if ($upstream_warning_count -gt $hc_upstream_warning)
+#                {
+#                    Write-Output "Upstream became unhealthy! Killing sigsci-agent.exe process"
+#                    Stop-Process -Name "sigsci-agent"
+#                    return
+#                }
+#                else
+#                {
+#                    Write-Output "WARNING: sigsci-agent HC_UPSTREAM_WARNING at $upstream_warning_count out of $hc_upstream_warning."
+#                }
+#            }
+#            else
+#            {
+#                $upstream_warning_count = 0
+#            }
         }
     }
 
-    Start-Sleep -s $initial_sleep
-
-
-    Start-Job -Name "SigSci-HealthCheck" -ScriptBlock $hc
+    #create hc.ps1 in $sigsci_dir\bin
+    $file = "hc.ps1"
+    $bin_dir = "$sigsci_dir\bin"
+    Try
+    {
+        $hc_script | Out-File -FilePath "$bin_dir\$file" -Width 4096
+        return "$bin_dir\$file"
+    }
+    Catch {
+        Write-Output "There was a problem creating $file in $bin_dir. More Info: $PSItem"
+        Write-Output "The app and agent will still start, but health check functionality will be disabled."
+    }
+    return $null
 }
 
 # check if the PORT envirornment variable is set
@@ -84,7 +102,7 @@ if (-not (Test-Path env:PORT))
 # check if SIGSCI_ACCESSKEYID and SIGSCI_SECRETACCESSKEY are set before proceeding with agent installation
 if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKEY))
 {
-    # setup directories
+    # setup sigsci agent directories
     $sigsci_dir = (Join-Path $pwd -ChildPath '.profile.d' | Join-Path -ChildPath 'sigsci')
     New-Item -ItemType Directory -Force -Path $sigsci_dir\bin | Out-Null
     New-Item -ItemType Directory -Force -Path $sigsci_dir\conf | Out-Null
@@ -166,21 +184,29 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # default is to not require the agent.
         if (-not(Test-Path env:SIGSCI_REQUIRED))
         {
-            $sigsci_required = "false"
+            $sigsci_required = $false
         }
         else
         {
-            $sigsci_required = $Env:SIGSCI_REQUIRED
+            $sigsci_required = $false
+
+            if ($Env:SIGSCI_REQUIRED -eq "true") {
+                $sigsci_required = $true
+            }
         }
 
         # health check - disable by default.
         if (-not(Test-Path env:SIGSCI_HC))
         {
-            $sigsci_hc = "false"
+            $sigsci_hc = $false
         }
         else
         {
-            $sigsci_hc = $Env:SIGSCI_HC
+            $sigsci_hc = $false
+
+            if ($Env:SIGSCI_HC -eq "true") {
+                $sigsci_hc = $true
+            }
         }
 
         # health check - initial sleep.
@@ -190,7 +216,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         }
         else
         {
-            $sigsci_hc_init_sleep = $Env:SIGSCI_HC_INIT_SLEEP
+            $sigsci_hc_init_sleep = [int]$Env:SIGSCI_HC_INIT_SLEEP
         }
 
         # health check config
@@ -208,18 +234,14 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         # Note: the listener port is defined by the PORT_LISTENER variable.
         # Note: the upstream port is defined by the PORT_UPSTREAM variable.
         # Note: the PID to kill is defined by the SIGSCI_PID variable.
-        if (-not(Test-Path env:SIGSCI_HC_CONFIG))
-        {
-            $sigsci_hc_config = @('5','/','502','5','200','3')
-        }
-        else
+        if (Test-Path env:SIGSCI_HC_CONFIG)
         {
             $sigsci_hc_config = "$Env:SIGSCI_HC_CONFIG".split(":")
+
         }
 
         # reassign PORT for application process.
-        [Environment]::SetEnvironmentVariable("PORT", $port_upstream, 'User')
-        # $Env:PORT = $port_upstream
+        $Env:PORT = $port_upstream
 
         $sigsci_config = @"
 server-flavor="sigsci-module-cloudfoundry"
@@ -244,7 +266,7 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
         # Check if agent is running. If not, reassign port so app can start.
         if (-not(Get-Process sigsci-agent))
         {
-            if ($Env:SIGSCI_REQUIRED -eq "true")
+            if ($sigsci_required)
             {
                 Write-Output "-----> Signal Sciences failed to start!"
                 Write-Output "-----> SIGSCI_REQUIRED is enabled, port reassignment will not occur and app will be unhealthy!!!"
@@ -254,13 +276,17 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
                 Write-Output "-----> Deploying application without Signal Sciences enabled!!!"
             }
         } else {
-            Write-Output "!!!sigsci-agent started"
-            if ($sigsci_hc -eq "true")
+            if ($sigsci_hc)
             {
                 Write-Output "-----> sigsci-agent health checks enabled. Health checks will start in $sigsci_hc_init_sleep seconds."
 
-                # call hc func
-                health_check($sigsci_hc_config, $port_listener, $port_upstream, $sigsci_hc_init_sleep)
+                # generate the health check script
+                $script = generate_hc_script
+                Write-Output "Script is $script"
+
+                # start the agent health check process
+                Start-Process powershell.exe -ArgumentList "-file $script" -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden -PassThru `
+                    -RedirectStandardError ".\hc-stderr.out" -RedirectStandardOutput ".\hc-stdout.log"
             }
         }
     }
