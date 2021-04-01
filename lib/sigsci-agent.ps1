@@ -32,7 +32,7 @@ function generate_hc_script {
             $listener_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_listener_port$hc_endpoint" -TimeoutSec 3).StatusCode
 
             # check the upstream process
-            # $upstream_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_upstream_port$hc_endpoint" -TimeoutSec 3).StatusCode
+            $upstream_status = (Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:$hc_upstream_port$hc_endpoint" -TimeoutSec 3).StatusCode
 
             if (($listener_status -eq $hc_listener_kill_on_status) -or (000 -eq $listener_status))
             {
@@ -40,13 +40,13 @@ function generate_hc_script {
 
                 if ($listener_warning_count -gt $hc_listener_warning)
                 {
-                    Write-Output "Listener became unhealthy! Killing sigsci-agent.exe process"
+                    Write-Error "Listener became unhealthy! Killing sigsci-agent.exe process"
                     Stop-Process -Name "sigsci-agent"
                     return
                 }
                 else
                 {
-                    Write-Output "WARNING: sigsci-agent HC_LISTENER_WARNING at $listener_warning_count out of $hc_listener_warning."
+                    Write-Warning "sigsci-agent HC_LISTENER_WARNING at $listener_warning_count out of $hc_listener_warning."
                 }
             }
             else
@@ -61,13 +61,13 @@ function generate_hc_script {
 
                 if ($upstream_warning_count -gt $hc_upstream_warning)
                 {
-                    Write-Output "Upstream became unhealthy! Killing sigsci-agent.exe process"
+                    Write-Error "Upstream became unhealthy! Killing sigsci-agent.exe process"
                     Stop-Process -Name "sigsci-agent"
                     return
                 }
                 else
                 {
-                    Write-Output "WARNING: sigsci-agent HC_UPSTREAM_WARNING at $upstream_warning_count out of $hc_upstream_warning."
+                    Write-Warning "sigsci-agent HC_UPSTREAM_WARNING at $upstream_warning_count out of $hc_upstream_warning."
                 }
             }
             else
@@ -86,8 +86,8 @@ function generate_hc_script {
         return "$bin_dir\$file"
     }
     Catch {
-        Write-Output "There was a problem creating $file in $bin_dir. More Info: $PSItem"
-        Write-Output "The app and agent will still start, but health check functionality will be disabled."
+        Write-Error "There was a problem creating $file in $bin_dir. More Info: $PSItem"
+        Write-Error "The app and agent will still start, but health check functionality will be disabled."
     }
     return $null
 }
@@ -122,8 +122,8 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
     if (-not ($status -eq 200))
     {
         # skip agent install if $status not 200
-        Write-Output "-----> SigSci Agent version $sigsci_agent_version not found or network unavailable after 90 seconds!"
-        Write-Output "-----> SIGSCI AGENT WILL NOT BE INSTALLED!"
+        Write-Error "-----> SigSci Agent version $sigsci_agent_version not found or network unavailable after 90 seconds!"
+        Write-Error "-----> SIGSCI AGENT WILL NOT BE INSTALLED!"
     } else {
         Write-Output "-----> Downloading sigsci-agent"
         Invoke-WebRequest -UseBasicParsing -OutFile "sigsci-agent_$sigsci_agent_version.zip" `
@@ -141,7 +141,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
             $hash = Select-String -Path "./sigsci-agent_$sigsci_agent_version.zip.sha256" -Pattern  $computed_hash -Quiet
             if (-not (Select-String -Path "./sigsci-agent_$sigsci_agent_version.zip.sha256" -Pattern $computed_hash -Quiet))
             {
-                Write-Output "-----> sigsci-agent not installed because checksum integrity check failed"
+                Write-Error "-----> sigsci-agent not installed because checksum integrity check failed"
                 exit 1
             }
         }
@@ -241,7 +241,9 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         }
 
         # reassign PORT for application process.
-        $Env:PORT = $port_upstream
+        # NOTE: It seems like setting an env var at the user level explicitly is the only way to persist it beyond
+        #       the script's session.
+        [System.Environment]::SetEnvironmentVariable('PORT', $port_upstream,[System.EnvironmentVariableTarget]::User)
 
         $sigsci_config = @"
 server-flavor="sigsci-module-cloudfoundry"
@@ -268,12 +270,12 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
         {
             if ($sigsci_required)
             {
-                Write-Output "-----> Signal Sciences failed to start!"
-                Write-Output "-----> SIGSCI_REQUIRED is enabled, port reassignment will not occur and app will be unhealthy!!!"
+                Write-Error "-----> Signal Sciences failed to start!"
+                Write-Error "-----> SIGSCI_REQUIRED is enabled, port reassignment will not occur and app will be unhealthy!!!"
             } else {
-                $Env:PORT = $port_listener
-                Write-Output "-----> Signal Sciences failed to start!"
-                Write-Output "-----> Deploying application without Signal Sciences enabled!!!"
+                [System.Environment]::SetEnvironmentVariable('PORT', $port_listener,[System.EnvironmentVariableTarget]::User)
+                Write-Error "-----> Signal Sciences failed to start!"
+                Write-Error "-----> Deploying application without Signal Sciences enabled!!!"
             }
         } else {
             if ($sigsci_hc)
@@ -282,11 +284,16 @@ access-log="$($sigsci_reverse_proxy_accesslog)"
 
                 # generate the health check script
                 $script = generate_hc_script
-                Write-Output "Script is $script"
 
-                # start the agent health check process
-                Start-Process powershell.exe -ArgumentList "-file $script" -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden -PassThru `
+                if ($script -ne $null)
+                {
+                    # start the agent health check process
+                    Start-Process powershell.exe -ArgumentList "-file $script" -WorkingDirectory "$sigsci_dir\bin" -WindowStyle Hidden -PassThru `
                     -RedirectStandardError ".\hc-stderr.out" -RedirectStandardOutput ".\hc-stdout.log"
+                }
+                else {
+                    Write-Error "generate_hc_script returned null. Health checks are not running"
+                }
             }
         }
     }
