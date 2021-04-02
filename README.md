@@ -12,6 +12,15 @@ Application developers will need to specify the buildpack with the `cf push` com
 
 `cf push YOUR-APP -b https://github.com/signalsciences/sigsci-cloudfoundry-buildpack.git -b APP_BUILDPACK`
 
+### Windows support
+Support is available for Windows stemcells. Deploying to a windows environment is similar to linux:
+
+`cf push YOUR-APP -s windows -b https://github.com/signalsciences/sigsci-cloudfoundry-buildpack.git -b APP_BUILDPACK`
+
+In almost all cases, it will be used in conjunction with the following  buildpacks:
+* `binary-buildpack:` [binary-buildpack](https://github.com/cloudfoundry/binary-buildpack) - for console apps, .net core, .exe
+* `hwc-buildpack:` [hwc-buildpack](https://github.com/cloudfoundry/hwc-buildpack) - legacy ASP.NET / WCF
+
 ### Configuration
 
 To configure the Signal Sciences agent the following environment variables must be set:
