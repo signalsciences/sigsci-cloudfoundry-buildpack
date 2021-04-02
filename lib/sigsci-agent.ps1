@@ -115,6 +115,10 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
         $sigsci_agent_version = (Invoke-WebRequest -UseBasicParsing -Uri 'https://dl.signalsciences.net/sigsci-agent/VERSION').Content.TrimEnd("`r?`n")
 
     }
+    else
+    {
+        $sigsci_agent_version = $Env:SIGSCI_AGENT_VERSION
+    }
 
     # check if $sigsci_agent_version exists
     $status = (Invoke-WebRequest -UseBasicParsing -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/VERSION").StatusCode
