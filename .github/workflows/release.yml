@@ -15,7 +15,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Create Release Asset
         run: |
-          zip -r sigsci-cloudfoundry-buildpack.zip bin lib
+          tar -zcvf sigsci-cloudfoundry-buildpack.tar.gz bin/ lib/
       - name: Get Upload URL
         run:
           echo UPLOAD_URL=${{ github.event.release.upload_url }} >> $GITHUB_ENV
@@ -25,7 +25,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ./sigsci-cloudfoundry-buildpack.zip
-          asset_name: sigsci-cloudfoundry-buildpack.zip
-          asset_content_type: application/zip
+          asset_path: ./sigsci-cloudfoundry-buildpack.tar.gz
+          asset_name: sigsci-cloudfoundry-buildpack.tar.gz
+          asset_content_type: application/gzip
 

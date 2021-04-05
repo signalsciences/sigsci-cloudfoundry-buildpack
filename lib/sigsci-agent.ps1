@@ -254,7 +254,7 @@ server-flavor="sigsci-module-cloudfoundry"
 # Signal Sciences Reverse Proxy Config
 [revproxy-listener.http]
 listener="http://0.0.0.0:$($port_listener)"
-upstreams="http://$($sigsci_upstream)"
+upstreams="http://$sigsci_upstream"
 access-log="$($sigsci_reverse_proxy_accesslog)"
 "@
 
