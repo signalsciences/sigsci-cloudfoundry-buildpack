@@ -10,7 +10,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Get release
         id: get_release
-        uses: bruceadams/get-release@v1.2.2
+        uses: bruceadams/get-release@f589ce0779c7bef1faf175f7488c972eb47dc046 # Commit sha for v1.2.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Create Release Asset
