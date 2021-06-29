@@ -87,12 +87,12 @@ then
 
   ## install agent
 
-  # if the customer has set INTERNAL_AGENT_DOWNLOAD_URL, then use it instead of the dl.signalsciences.net site.
-  if [ -z $INTERNAL_AGENT_DOWNLOAD_URL ]
+  # if the customer has set SIGSCI_INTERNAL_AGENT_DOWNLOAD_URL, then use it instead of the dl.signalsciences.net site.
+  if [ -z $SIGSCI_INTERNAL_AGENT_DOWNLOAD_URL ]
   then
     DOWNLOAD_URL_BASE='https://dl.signalsciences.net/sigsci-agent'
   else
-    DOWNLOAD_URL_BASE="${INTERNAL_AGENT_DOWNLOAD_URL}"
+    DOWNLOAD_URL_BASE="${SIGSCI_INTERNAL_AGENT_DOWNLOAD_URL}"
   fi
 
   # if agent version not specified then get the latest version.

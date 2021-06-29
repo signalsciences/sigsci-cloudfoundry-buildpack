@@ -102,14 +102,14 @@ if (-not (Test-Path env:PORT))
 # check if SIGSCI_ACCESSKEYID and SIGSCI_SECRETACCESSKEY are set before proceeding with agent installation
 if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKEY))
 {
-    # check if INTERNAL_AGENT_DOWNLOAD_URL env var has been set. If so, use it as the agent download url
-    if (-not (Test-Path env:INTERNAL_AGENT_DOWNNLOAD_URL))
+    # check if SIGSCI_INTERNAL_AGENT_DOWNLOAD_URL env var has been set. If so, use it as the agent download url
+    if (-not (Test-Path env:SIGSCI_INTERNAL_AGENT_DOWNNLOAD_URL))
     {
         $download_url_base = 'https://dl.signalsciences.net/sigsci-agent'
     }
     else
     {
-        $download_url_base = $Env:INTERNAL_AGENT_DOWNLOAD_URL
+        $download_url_base = $Env:SIGSCI_INTERNAL_AGENT_DOWNLOAD_URL
     }
 
     # setup sigsci agent directories
