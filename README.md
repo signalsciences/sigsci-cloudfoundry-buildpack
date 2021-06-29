@@ -45,6 +45,8 @@ To configure the Signal Sciences agent the following environment variables must 
 
 `SIGSCI_SERVER_HOSTNAME` (optional)
 
+`SIGSCI_INTERNAL_AGENT_DOWNLOAD_URL` (optional)
+
 Set environment variables using the `cf` command:
 
 `cf set-env YOUR-APP <variable name> "<value>"`
