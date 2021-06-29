@@ -102,6 +102,16 @@ if (-not (Test-Path env:PORT))
 # check if SIGSCI_ACCESSKEYID and SIGSCI_SECRETACCESSKEY are set before proceeding with agent installation
 if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKEY))
 {
+    # check if INTERNAL_AGENT_DOWNLOAD_URL env var has been set. If so, use it as the agent download url
+    if (-not (Test-Path env:INTERNAL_AGENT_DOWNNLOAD_URL))
+    {
+        $download_url_base = 'https://dl.signalsciences.net/sigsci-agent'
+    }
+    else
+    {
+        $download_url_base = $Env:INTERNAL_AGENT_DOWNLOAD_URL
+    }
+
     # setup sigsci agent directories
     $sigsci_dir = (Join-Path $pwd -ChildPath '.profile.d' | Join-Path -ChildPath 'sigsci')
     New-Item -ItemType Directory -Force -Path $sigsci_dir\bin | Out-Null
@@ -112,7 +122,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
     # if agent version not specified then get the latest version.
     if (-not (Test-Path env:SIGSCI_AGENT_VERSION))
     {
-        $sigsci_agent_version = (Invoke-WebRequest -UseBasicParsing -Uri 'https://dl.signalsciences.net/sigsci-agent/VERSION').Content.TrimEnd("`r?`n")
+        $sigsci_agent_version = (Invoke-WebRequest -UseBasicParsing -Uri "$download_url_base/VERSION").Content.TrimEnd("`r?`n")
 
     }
     else
@@ -121,7 +131,7 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
     }
 
     # check if $sigsci_agent_version exists
-    $status = (Invoke-WebRequest -UseBasicParsing -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/VERSION").StatusCode
+    $status = (Invoke-WebRequest -UseBasicParsing -Uri "$download_url_base/$sigsci_agent_version/VERSION").StatusCode
 
     if (-not ($status -eq 200))
     {
@@ -131,14 +141,14 @@ if ((Test-Path env:SIGSCI_ACCESSKEYID) -and (Test-Path env:SIGSCI_SECRETACCESSKE
     } else {
         Write-Output "-----> Downloading sigsci-agent"
         Invoke-WebRequest -UseBasicParsing -OutFile "sigsci-agent_$sigsci_agent_version.zip" `
-                -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip"
+                -Uri "$download_url_base/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip"
 
         if (-not(Test-Path env:SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK))
         {
             # download the .sha256 file
             Invoke-WebRequest -UseBasicParsing `
                 -OutFile "sigsci-agent_$sigsci_agent_version.zip.sha256" `
-                -Uri "https://dl.signalsciences.net/sigsci-agent/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip.sha256"
+                -Uri "$download_url_base/$sigsci_agent_version/windows/sigsci-agent_$sigsci_agent_version.zip.sha256"
 
             # compute hash and verify against .sha256
             $computed_hash = (Get-FileHash -Algorithm SHA256 "./sigsci-agent_$sigsci_agent_version.zip").Hash
