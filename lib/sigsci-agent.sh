@@ -87,14 +87,22 @@ then
 
   ## install agent
 
+  # if the customer has set INTERNAL_AGENT_DOWNLOAD_URL, then use it instead of the dl.signalsciences.net site.
+  if [ -z $INTERNAL_AGENT_DOWNLOAD_URL ]
+  then
+    DOWNLOAD_URL_BASE='https://dl.signalsciences.net/sigsci-agent'
+  else
+    DOWNLOAD_URL_BASE="${INTERNAL_AGENT_DOWNLOAD_URL}"
+  fi
+
   # if agent version not specified then get the latest version.
   if [ -z $SIGSCI_AGENT_VERSION ]
   then
-    SIGSCI_AGENT_VERSION=$(curl -s -L --retry 45 --retry-delay 2 https://dl.signalsciences.net/sigsci-agent/VERSION)
+    SIGSCI_AGENT_VERSION=$(curl -s -L --retry 45 --retry-delay 2 "${DOWNLOAD_URL_BASE}/VERSION")
   fi
 
   # check if version exists.
-  STATUS=$(curl -s --retry 45 --retry-delay 2 -o /dev/null -w "%{http_code}" https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/VERSION)
+  STATUS=$(curl -s --retry 45 --retry-delay 2 -o /dev/null -w "%{http_code}" "${DOWNLOAD_URL_BASE}/${SIGSCI_AGENT_VERSION}/VERSION")
   if [ $STATUS -ne 200 ]
   then
 
@@ -104,11 +112,11 @@ then
 
   else
     echo "-----> Downloading sigsci-agent"
-    curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz > /dev/null
+    curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz "${DOWNLOAD_URL_BASE}/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz" > /dev/null
 
     if [ -z $SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK ]
     then
-        curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 > /dev/null
+        curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 "${DOWNLOAD_URL_BASE}/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256" > /dev/null
 
         # validate the gzip file
         if [[ "$(shasum -c sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256)" != *"OK"* ]]
