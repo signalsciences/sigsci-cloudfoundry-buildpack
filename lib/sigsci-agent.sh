@@ -122,7 +122,8 @@ then
     fi
     else
       # download the build pack from a local repo
-      curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz "${SIGSCI_AGENT_DOWNLOAD_URL}/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz" > /dev/null
+      echo "-----> Using local SigSci Agent repository ${SIGSCI_AGENT_DOWNLOAD_URL}"
+      curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz $SIGSCI_AGENT_DOWNLOAD_URL > /dev/null
     fi
 
     tar -xzf "sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz"
@@ -244,7 +245,6 @@ EOT
         health_check &
       fi
     fi
-  fi
 
 else
   (>&2 echo "-----> Signal Sciences access keys not set. Agent not starting!!!")
