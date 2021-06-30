@@ -45,7 +45,7 @@ To configure the Signal Sciences agent the following environment variables must 
 
 `SIGSCI_SERVER_HOSTNAME` (optional)
 
-`SIGSCI_INTERNAL_AGENT_DOWNLOAD_URL` (optional)
+`SIGSCI_AGENT_DOWNLOAD_URL` (optional, NOTE: This needs to be a fully qualified http(s) path to a tar, gzipped agent file)
 
 Set environment variables using the `cf` command:
 
