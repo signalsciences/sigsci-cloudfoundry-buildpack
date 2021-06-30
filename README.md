@@ -47,6 +47,8 @@ To configure the Signal Sciences agent the following environment variables must 
 
 `SIGSCI_AGENT_DOWNLOAD_URL` (optional, NOTE: This needs to be a fully qualified http(s) path to a tar, gzipped agent file)
 
+**_NOTE: If SIGSCI_AGENT_DOWNLOAD_URL is set, then SIGSCI_AGENT_VERSION will be ignored, and SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK will be implied._**
+
 Set environment variables using the `cf` command:
 
 `cf set-env YOUR-APP <variable name> "<value>"`
