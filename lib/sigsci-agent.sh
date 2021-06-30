@@ -87,7 +87,7 @@ then
 
   ## install agent
 
-  #  if we're downloading from an internal repo, then we don't need to worry about figuring out what version we need
+  # if a specific download url is provided, we can bypass version-determination logic
   if [ -z $SIGSCI_AGENT_DOWNLOAD_URL ]
   then
     # if agent version not specified then get the latest version.
@@ -117,16 +117,19 @@ then
         then
             (>&2 echo "-----> sigsci-agent not installed because checksum integrity check failed")
             exit 1
+        else
+          # shasum expects to find the agent tar.gz file with the version in the name. Rename the file if shasum check passes so that the name is consistent regardless of where the file was downloaded from
+          mv sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz sigsci-agent.tar.gz
         fi
       fi
     fi
     else
-      # download the build pack from a local repo
-      echo "-----> Using local SigSci Agent repository ${SIGSCI_AGENT_DOWNLOAD_URL}"
-      curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz $SIGSCI_AGENT_DOWNLOAD_URL > /dev/null
+      # download the agent tar.gz from a custom url
+      echo "-----> Downloading SigSci Agent from ${SIGSCI_AGENT_DOWNLOAD_URL}"
+      curl -s --retry 45 --retry-delay 2 -o sigsci-agent.tar.gz $SIGSCI_AGENT_DOWNLOAD_URL > /dev/null
     fi
 
-    tar -xzf "sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz"
+    tar -xzf "sigsci-agent.tar.gz"
     mv sigsci-agent "${SIGSCI_DIR}/bin/sigsci-agent"
     echo "-----> Finished installing sigsci-agent"
 
