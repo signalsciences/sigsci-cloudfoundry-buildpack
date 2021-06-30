@@ -87,38 +87,49 @@ then
 
   ## install agent
 
-  # if agent version not specified then get the latest version.
-  if [ -z $SIGSCI_AGENT_VERSION ]
+  # if a specific download url is provided, we can bypass version-determination logic
+  if [ -z $SIGSCI_AGENT_DOWNLOAD_URL ]
   then
-    SIGSCI_AGENT_VERSION=$(curl -s -L --retry 45 --retry-delay 2 https://dl.signalsciences.net/sigsci-agent/VERSION)
-  fi
-
-  # check if version exists.
-  STATUS=$(curl -s --retry 45 --retry-delay 2 -o /dev/null -w "%{http_code}" https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/VERSION)
-  if [ $STATUS -ne 200 ]
-  then
-
-    # if we don't get a 200 response, skip agent installation.
-    (>&2 echo "-----> SigSci Agent version ${SIGSCI_AGENT_VERSION} not found or network unavailable after 90 seconds!")
-    (>&2 echo "-----> SIGSCI AGENT WILL NOT BE INSTALLED!")
-
-  else
-    echo "-----> Downloading sigsci-agent"
-    curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz > /dev/null
-
-    if [ -z $SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK ]
+    # if agent version not specified then get the latest version.
+    if [ -z $SIGSCI_AGENT_VERSION ]
     then
-        curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 > /dev/null
+      SIGSCI_AGENT_VERSION=$(curl -s -L --retry 45 --retry-delay 2 "https://dl.signalsciences.net/sigsci-agent/VERSION")
+    fi
+
+    # check if version exists.
+    STATUS=$(curl -s --retry 45 --retry-delay 2 -o /dev/null -w "%{http_code}" "https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/VERSION")
+
+    if [ $STATUS -ne 200 ]
+    then
+      # if we don't get a 200 response, skip agent installation.
+      (>&2 echo "-----> SigSci Agent version ${SIGSCI_AGENT_VERSION} not found or network unavailable after 90 seconds!")
+      (>&2 echo "-----> SIGSCI AGENT WILL NOT BE INSTALLED!")
+    else
+      echo "-----> Downloading sigsci-agent"
+      curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz "https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz" > /dev/null
+
+      if [ -z $SIGSCI_DISABLE_CHECKSUM_INTEGRITY_CHECK ]
+      then
+        curl -s --retry 45 --retry-delay 2 -o sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256 "https://dl.signalsciences.net/sigsci-agent/${SIGSCI_AGENT_VERSION}/linux/sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256" > /dev/null
 
         # validate the gzip file
         if [[ "$(shasum -c sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz.sha256)" != *"OK"* ]]
         then
             (>&2 echo "-----> sigsci-agent not installed because checksum integrity check failed")
             exit 1
+        else
+          # shasum expects to find the agent tar.gz file with the version in the name. Rename the file if shasum check passes so that the name is consistent regardless of where the file was downloaded from
+          mv sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz sigsci-agent.tar.gz
         fi
+      fi
+    fi
+    else
+      # download the agent tar.gz from a custom url
+      echo "-----> Downloading SigSci Agent from ${SIGSCI_AGENT_DOWNLOAD_URL}"
+      curl -s --retry 45 --retry-delay 2 -o sigsci-agent.tar.gz $SIGSCI_AGENT_DOWNLOAD_URL > /dev/null
     fi
 
-    tar -xzf "sigsci-agent_${SIGSCI_AGENT_VERSION}.tar.gz"
+    tar -xzf "sigsci-agent.tar.gz"
     mv sigsci-agent "${SIGSCI_DIR}/bin/sigsci-agent"
     echo "-----> Finished installing sigsci-agent"
 
@@ -237,7 +248,6 @@ EOT
         health_check &
       fi
     fi
-  fi
 
 else
   (>&2 echo "-----> Signal Sciences access keys not set. Agent not starting!!!")
