@@ -1,0 +1,14 @@
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  annotations:
+    github.com/project-slug: signalsciences/sigsci-cloudfoundry-buildpack
+  description: Buildpack to support cloudfoundry multi-buildpack installation
+  name: sigsci-cloudfoundry-buildpack
+  title: signalsciences/sigsci-cloudfoundry-buildpack
+spec:
+  lifecycle: source
+  owner: group:ngwaf-agent-modules
+  type: repository
